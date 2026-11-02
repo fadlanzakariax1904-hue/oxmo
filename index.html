@@ -240,6 +240,13 @@
     .toast { position:fixed; top:18px; left:50%; transform:translate(-50%,-20px); opacity:0; pointer-events:none; z-index:100; max-width:min(560px,calc(100% - 28px)); border:1px solid rgba(255,255,255,.17); border-radius:14px; background:rgba(25,25,29,.91); backdrop-filter:blur(18px); box-shadow:var(--shadow); padding:13px 17px; color:#f3f3f5; font-size:12px; transition:.25s; }
     .toast.show { opacity:1; transform:translate(-50%,0); }
     .toast.error { border-color:rgba(225,43,75,.45); }
+    .data-status { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:14px 0 4px; padding:12px 15px; border:1px solid rgba(255,255,255,.12); border-radius:15px; background:rgba(255,255,255,.045); color:#c7c7ce; font-size:11px; line-height:1.6; }
+    .data-status.error { border-color:rgba(225,43,75,.42); background:rgba(150,25,48,.10); color:#f0cbd2; }
+    .data-status.live { border-color:rgba(100,180,130,.25); }
+    .data-status button { flex:0 0 auto; border:1px solid rgba(255,255,255,.2); border-radius:999px; background:rgba(255,255,255,.07); color:#fff; padding:8px 12px; font:inherit; cursor:pointer; }
+    .data-status button:disabled { opacity:.55; cursor:wait; }
+    @media(max-width:540px) { .data-status { align-items:flex-start; flex-direction:column; } }
+
     .modal-backdrop { position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.72); backdrop-filter:blur(12px); display:grid; place-items:center; padding:20px; opacity:0; pointer-events:none; transition:.2s; }
     .modal-backdrop.open { opacity:1; pointer-events:auto; }
     .modal { width:min(820px,100%); max-height:min(84vh,800px); overflow:auto; border:1px solid rgba(255,255,255,.16); border-radius:24px; background:linear-gradient(145deg,#1c1c22,#0d0d10); box-shadow:0 35px 100px rgba(0,0,0,.65); padding:22px; display:grid; grid-template-columns:.7fr 1.3fr; gap:25px; transform:translateY(12px); transition:.25s; }
@@ -405,7 +412,7 @@
     /* ------------------------------------------------------------------
        CONNECT GOOGLE APPS SCRIPT
        1) Deploy Code.gs as a Web App and copy its /exec URL below.
-       2) Keep this file on GitHub Pages (HTTPS is required for Web Crypto).
+       2) Host this static frontend on Cloudflare Pages (HTTPS is required for Web Crypto).
     ------------------------------------------------------------------- */
     const API_URL = "https://script.google.com/macros/s/AKfycbwpKtUrbop3xpza5isYBVhHKXiotFm0I4Tn8PoXrD0LYR8NjQuJ7JoXtiix5cpi7I94/exec";
     const API_READY = /^https:\/\/script\.google\.com\/macros\/s\//.test(API_URL);
@@ -455,6 +462,7 @@
 
     const state = {
       view: 'home', data: structuredCloneSafe(DEMO_DATA), workFilter: 'Film',
+      apiStatus: API_READY ? 'loading' : 'preview', apiError: '', apiUpdatedAt: '', apiVersion: '',
       bookingCategory: '', bookingSubcategory: '', clientToken: '', clientData: null,
       lastFocus: null
     };
@@ -482,11 +490,11 @@
         const script = document.createElement('script');
         let finished = false;
         const clean = () => { if (finished) return; finished = true; clearTimeout(timer); delete window[callback]; script.remove(); };
-        window[callback] = response => { clean(); if (response && response.ok) resolve(response); else reject(new Error(response && response.error ? response.error : 'Request failed.')); };
-        const query = new URLSearchParams({action, callback, ...params});
+        window[callback] = response => { clean(); if (response && response.ok) resolve(response); else reject(new Error(response && response.error ? response.error : 'API tidak mengembalikan data valid.')); };
+        const query = new URLSearchParams({action, callback, _ts:String(Date.now()), ...params});
         script.src = API_URL + (API_URL.includes('?') ? '&' : '?') + query.toString();
-        script.onerror = () => { clean(); reject(new Error('Tidak dapat terhubung ke Google Apps Script. Periksa URL deployment dan izin akses.')); };
-        const timer = setTimeout(() => { clean(); reject(new Error('Koneksi terlalu lama. Silakan coba kembali.')); }, 15000);
+        script.onerror = () => { clean(); reject(new Error('Apps Script tidak dapat diakses. Periksa deployment /exec dan izin Anyone.')); };
+        const timer = setTimeout(() => { clean(); reject(new Error('Request ke Apps Script timeout. Periksa koneksi dan deployment.')); }, 20000);
         document.body.appendChild(script);
       });
     }
@@ -526,17 +534,40 @@
       });
     }
 
+    function emptyPublicData() {
+      return { settings:{}, services:[], packages:[], portfolio:[], team:[], testimonials:[], faq:[] };
+    }
+
     async function loadPublicData() {
-      if (!API_READY) return;
+      if (!API_READY) { state.apiStatus='preview'; return false; }
+      state.apiStatus='loading'; state.apiError='';
       try {
         const data = await apiCall('publicData');
+        ['services','packages','portfolio','team','testimonials','faq'].forEach(key => {
+          if (!Array.isArray(data[key])) throw new Error('Respons API tidak memiliki daftar ' + key + '. Deploy ulang Code.gs versi Sync Fix.');
+        });
+        if (!data.settings || typeof data.settings !== 'object') throw new Error('Data Settings tidak terbaca dari Google Sheets.');
         state.data = {
-          settings: data.settings || {}, services: data.services || [], packages: data.packages || [],
-          portfolio: data.portfolio || [], team: data.team || [], testimonials: data.testimonials || [], faq: data.faq || []
+          settings: data.settings,
+          services: data.services,
+          packages: data.packages,
+          portfolio: data.portfolio,
+          team: data.team,
+          testimonials: data.testimonials,
+          faq: data.faq
         };
+        state.apiStatus='live';
+        state.apiUpdatedAt=data.updated_at || new Date().toISOString();
+        state.apiVersion=data.api_version || 'legacy';
+        state.apiError='';
+        return true;
       } catch (error) {
-        console.warn('Oxmo API:', error.message);
-        showToast('Mode preview: hubungkan API_URL untuk mengaktifkan database.', true);
+        console.error('Oxmo database sync failed:', error);
+        // Do not show stale DEMO_DATA when API_URL is set but the database failed.
+        state.data = emptyPublicData();
+        state.apiStatus='error';
+        state.apiError=error.message || 'Unknown API error';
+        return false;
       }
     }
 
@@ -739,7 +770,15 @@
     function render() {
       const main = $('#appMain');
       const pages = {home:homePage,work:workPage,services:servicesPage,packages:packagesPage,team:teamPage,booking:bookingPage,client:clientPage};
-      main.innerHTML = (pages[state.view] || homePage)();
+      const pageHtml = (pages[state.view] || homePage)();
+      const statusHtml = state.apiStatus === 'error'
+        ? `<div class="data-status error"><span><b>Database belum tersambung.</b> ${esc(state.apiError)} Cek deployment Apps Script dan spreadsheet yang terhubung.</span><button type="button" id="refreshDatabase">Coba lagi</button></div>`
+        : state.apiStatus === 'loading'
+          ? `<div class="data-status"><span>Mengambil konten terbaru dari Google Sheets…</span><button type="button" disabled>Loading</button></div>`
+          : state.apiStatus === 'live'
+            ? `<div class="data-status live"><span>Live database · konten dimuat dari Google Sheets · API ${esc(state.apiVersion)}</span><button type="button" id="refreshDatabase">Refresh data</button></div>`
+            : '';
+      main.innerHTML = statusHtml + pageHtml;
       $$('.nav-item').forEach(button => {
         const active = button.dataset.view === state.view;
         button.classList.toggle('active',active);
@@ -850,6 +889,13 @@
     }
 
     document.addEventListener('click', event => {
+      const refreshButton = event.target.closest('#refreshDatabase');
+      if (refreshButton) {
+        refreshButton.disabled = true; refreshButton.textContent = 'Refreshing…';
+        state.apiStatus = 'loading'; render();
+        loadPublicData().then(ok => { render(); showToast(ok ? 'Database berhasil diperbarui.' : 'Database belum berhasil dimuat. Periksa pesan di atas.', !ok); });
+        return;
+      }
       const viewButton = event.target.closest('[data-view]');
       if (viewButton) {
         event.preventDefault(); state.view = viewButton.dataset.view; window.location.hash = state.view; render(); window.scrollTo({top:0,behavior:'smooth'}); return;
