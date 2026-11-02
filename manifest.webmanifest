@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Oxmo One App",
+  "short_name": "Oxmo One",
+  "description": "Oxmo Creative House — film, photography, visual storytelling, and cinematic design.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080809",
+  "theme_color": "#080809",
+  "icons": [
+    {
+      "src": "./oxmo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
