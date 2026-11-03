@@ -6,8 +6,10 @@
   <meta name="theme-color" content="#080809">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./oxmo-icon.svg" type="image/svg+xml">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Crect width='48' height='48' rx='12' fill='%23080809'/%3E%3Cpath d='M24 8 40 24 24 40 8 24 24 8Z' stroke='white' stroke-width='2'/%3E%3Ccircle cx='24' cy='24' r='9' stroke='%23e12b4b' stroke-width='2'/%3E%3C/svg%3E">
+<meta property="og:title" content="Oxmo — Creative House">
+<meta property="og:description" content="Film, photography, visual storytelling, and cinematic design.">
+<meta property="og:type" content="website">
   <meta name="description" content="Oxmo — creative house for film, photography, visual storytelling, and cinematic design.">
   <title>Oxmo One App — Creative House</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -272,6 +274,15 @@
     .empty-state { padding:32px; border:1px dashed rgba(255,255,255,.16); border-radius:18px; text-align:center; color:var(--muted); font-size:12px; line-height:1.7; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
+    .quote-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .quote-card { padding:22px; border-radius:19px; display:flex; flex-direction:column; gap:16px; }
+    .quote-card p { margin:0; color:#d4d4da; font-size:13px; line-height:1.8; }
+    .quote-by { display:flex; align-items:center; gap:11px; }
+    .quote-by img, .quote-avatar { width:36px; height:36px; border-radius:50%; object-fit:cover; flex:0 0 36px; background:linear-gradient(140deg,#e02c4b,#631126); display:grid; place-items:center; font:600 12px 'Space Grotesk',sans-serif; }
+    .quote-by strong { display:block; font-size:12px; }
+    .quote-by span { display:block; font-size:10px; color:var(--muted); margin-top:2px; }
+    @media (max-width:680px) { .quote-grid { grid-template-columns:1fr; } }
+    
     @media (max-width:900px) {
       .hero { grid-template-columns:1fr .82fr; gap:8px; min-height:450px; }
       .hero-art { min-height:360px; }
@@ -473,6 +484,11 @@
     const plain = value => String(value == null ? '' : value).trim();
     const isTrue = value => value === true || String(value).toLowerCase() === 'true' || String(value) === '1' || String(value).toLowerCase() === 'yes';
     const validUrl = value => /^https?:\/\//i.test(String(value || '').trim()) ? String(value).trim() : '';
+        function imgUrl(value) {
+      const u = validUrl(value); if (!u) return '';
+      const m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/) || u.match(/drive\.google\.com\/(?:open|uc)\?[^#]*\bid=([\w-]+)/);
+      return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1000' : u;
+    }
     const setting = key => (state.data && state.data.settings && state.data.settings[key] != null) ? state.data.settings[key] : '';
     const unique = arr => [...new Set(arr.filter(Boolean))];
     const sorted = arr => [...(arr || [])].sort((a,b) => Number(a.sort_order || 9999) - Number(b.sort_order || 9999));
@@ -559,11 +575,18 @@
         state.apiStatus='live';
         state.apiUpdatedAt=data.updated_at || new Date().toISOString();
         state.apiVersion=data.api_version || 'legacy';
+                try { localStorage.setItem('oxmo_cache_v1', JSON.stringify({t:Date.now(), d:state.data})); } catch (_) {}
         state.apiError='';
         return true;
       } catch (error) {
         console.error('Oxmo database sync failed:', error);
         // Do not show stale DEMO_DATA when API_URL is set but the database failed.
+                let cached = null;
+        try { cached = JSON.parse(localStorage.getItem('oxmo_cache_v1') || 'null'); } catch (_) {}
+        if (cached && cached.d && Array.isArray(cached.d.portfolio)) {
+          state.data = cached.d; state.apiStatus='live'; state.apiVersion='cache'; state.apiError='';
+          return true;
+        }
         state.data = emptyPublicData();
         state.apiStatus='error';
         state.apiError=error.message || 'Unknown API error';
@@ -584,10 +607,11 @@
       return 'linear-gradient(150deg,#451a29 0%,#1b1b22 54%,#08090c 100%)';
     }
 
-    function posterVisual(item, large=false) {
-      const poster = validUrl(item.poster_url);
-      if (poster) return `<img src="${esc(poster)}" alt="Poster ${esc(item.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`;
-      return `<div class="poster-placeholder" style="--poster-bg:${posterStyle(item)}"><div class="poster-abstract"></div><div class="poster-content"><div class="poster-kicker">OXMO FILM HOUSE · ${esc(item.genre || 'SELECTED WORK')}</div><div class="poster-name" style="font-size:${large?'32px':'23px'}">${esc(item.title || 'Untitled')}</div><div class="poster-meta">${esc(item.genre || item.category || '')}${item.duration ? ' · '+esc(item.duration) : ''}</div></div></div>`;
+        function posterVisual(item, large=false) {
+      const poster = imgUrl(item.poster_url);
+      const placeholder = `<div class="poster-placeholder" style="--poster-bg:${posterStyle(item)}${poster?';display:none':''}"><div class="poster-abstract"></div><div class="poster-content"><div class="poster-kicker">OXMO FILM HOUSE · ${esc(item.genre || 'SELECTED WORK')}</div><div class="poster-name" style="font-size:${large?'32px':'23px'}">${esc(item.title || 'Untitled')}</div><div class="poster-meta">${esc(item.genre || item.category || '')}${item.duration ? ' · '+esc(item.duration) : ''}</div></div></div>`;
+      if (!poster) return placeholder;
+      return `<img src="${esc(poster)}" alt="Poster ${esc(item.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">` + placeholder;
     }
 
     function workCard(item, index=0) {
@@ -611,8 +635,8 @@
     function homePage() {
       const s = state.data.settings || {};
       const projects = sorted(state.data.portfolio || []).filter(w => isTrue(w.active) && String(w.category || '').toLowerCase() === 'film').slice(0,8);
-      const heroBg = validUrl(s.hero_image_url);
-      return `<section class="hero hero-minimal">
+      const heroBg = imgUrl(s.hero_image_url);
+      return `<section class="hero hero-minimal"><h1 class="sr-only">${esc(setting('hero_title') || 'Oxmo — Creative House')}</h1>
         <div class="hero-art" ${heroBg ? `style="background-image:linear-gradient(0deg,rgba(8,8,9,.3),rgba(8,8,9,.1)),url('${esc(heroBg)}');background-size:cover;background-position:center;border-radius:28px"` : ''}>
           <div class="halo"></div><div class="art-orbit">
             <div class="poster-art poster-back"><div class="poster-glow"></div></div>
@@ -682,7 +706,7 @@
       const team = sorted(state.data.team || []).filter(person=>isTrue(person.active));
       return `${headerTitle('Our <span class="gradient-text">team.</span>','The people behind Oxmo’s visual stories, productions, and creative collaborations.','OXMO / OUR TEAM')}
         <section class="section" style="padding-top:0">
-          ${team.length ? `<div class="team-grid">${team.map(person=>{const photo=validUrl(person.photo_url);const initials=plain(person.name).split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'OX';const social=validUrl(person.instagram_url);return `<article class="team-card glass"><div class="team-photo">${photo?`<img src="${esc(photo)}" alt="${esc(person.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`:''}<div class="team-initial" style="${photo?'display:none':''}">${esc(initials)}</div></div><div class="team-copy"><div class="team-role">${esc(person.role || 'Creative team')}</div><h3>${esc(person.name || 'Oxmo Team')}</h3><p>${esc(person.bio || '')}</p>${social?`<a class="team-social" href="${esc(social)}" target="_blank" rel="noopener">Instagram ↗</a>`:''}</div></article>`;}).join('')}</div>` : `<div class="empty-state">Our team profiles will appear here. Add each member in the <b>Team</b> tab in Google Sheets, include their name, role, short bio, and photo URL, then set <b>Active = TRUE</b>.</div>`}
+          ${team.length ? `<div class="team-grid">${team.map(person=>{const photo=imgUrl(person.photo_url);const initials=plain(person.name).split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'OX';const social=validUrl(person.instagram_url);return `<article class="team-card glass"><div class="team-photo">${photo?`<img src="${esc(photo)}" alt="${esc(person.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`:''}<div class="team-initial" style="${photo?'display:none':''}">${esc(initials)}</div></div><div class="team-copy"><div class="team-role">${esc(person.role || 'Creative team')}</div><h3>${esc(person.name || 'Oxmo Team')}</h3><p>${esc(person.bio || '')}</p>${social?`<a class="team-social" href="${esc(social)}" target="_blank" rel="noopener">Instagram ↗</a>`:''}</div></article>`;}).join('')}</div>` : `<div class="empty-state">Our team profiles will appear here. Add each member in the <b>Team</b> tab in Google Sheets, include their name, role, short bio, and photo URL, then set <b>Active = TRUE</b>.</div>`}
         </section><section class="section"><div class="cta-band"><div class="eyebrow">Work with Oxmo</div><h2>Let's create something <span class="gradient-text">together.</span></h2><p class="lead small">Have a project or collaboration in mind? Send the team your brief.</p><button class="btn btn-primary" data-view="booking">Start a project ↗</button></div></section>${contactSection()}`;
     }
 
@@ -767,15 +791,36 @@
       </div></section>`;
     }
 
+        function extraSections(view) {
+      const quotes = sorted(state.data.testimonials || []).filter(t => (t.active === undefined || isTrue(t.active)) && plain(t.quote));
+      const faqs = sorted(state.data.faq || []).filter(f => (f.active === undefined || isTrue(f.active)) && plain(f.question));
+      let html = '';
+      if (view === 'home' && quotes.length) {
+        html += `<section class="section"><div class="section-head"><div><div class="eyebrow">Kind words</div><h2>What clients <span class="gradient-text">say.</span></h2></div></div><div class="quote-grid">${quotes.slice(0,6).map(t => {
+          const av = imgUrl(t.avatar_url);
+          const ini = plain(t.client_name).split(/\s+/).filter(Boolean).slice(0,2).map(x => x[0]).join('').toUpperCase() || 'OX';
+          return `<article class="quote-card glass"><p>“${esc(t.quote)}”</p><div class="quote-by">${av ? `<img src="${esc(av)}" alt="" loading="lazy">` : `<div class="quote-avatar">${esc(ini)}</div>`}<div><strong>${esc(t.client_name)}</strong><span>${esc(t.role_or_project || '')}</span></div></div></article>`;
+        }).join('')}</div></section>`;
+      }
+      if (faqs.length) {
+        html += `<section class="section"><div class="section-head"><div><div class="eyebrow">FAQ</div><h2>Good to <span class="gradient-text">know.</span></h2></div></div><div class="faq-list">${faqs.map(f => `<details class="faq glass"><summary>${esc(f.question)}</summary><p>${esc(f.answer)}</p></details>`).join('')}</div></section>`;
+      }
+      return html;
+    }
+
     function render() {
       const main = $('#appMain');
       const pages = {home:homePage,work:workPage,services:servicesPage,packages:packagesPage,team:teamPage,booking:bookingPage,client:clientPage};
-      const pageHtml = (pages[state.view] || homePage)();
+            let pageHtml = (pages[state.view] || homePage)();
+      if (state.view === 'home' || state.view === 'booking') {
+        const marker = '<section class="section"><div class="section-head"><div><div class="eyebrow">Contact the studio';
+        pageHtml = pageHtml.replace(marker, () => extraSections(state.view) + marker);
+      }
       const statusHtml = state.apiStatus === 'error'
         ? `<div class="data-status error"><span><b>Database belum tersambung.</b> ${esc(state.apiError)} Cek deployment Apps Script dan spreadsheet yang terhubung.</span><button type="button" id="refreshDatabase">Coba lagi</button></div>`
         : state.apiStatus === 'loading'
           ? `<div class="data-status"><span>Mengambil konten terbaru dari Google Sheets…</span><button type="button" disabled>Loading</button></div>`
-          : state.apiStatus === 'live'
+                    : (state.apiStatus === 'live' && /[?&]admin=1/.test(location.search))
             ? `<div class="data-status live"><span>Live database · konten dimuat dari Google Sheets · API ${esc(state.apiVersion)}</span><button type="button" id="refreshDatabase">Refresh data</button></div>`
             : '';
       main.innerHTML = statusHtml + pageHtml;
@@ -797,7 +842,7 @@
       if (!item) return;
       state.lastFocus = document.activeElement;
       const trailer = validUrl(item.trailer_url);
-      const poster = validUrl(item.poster_url);
+      const poster = imgUrl(item.poster_url);
       $('#modalContent').innerHTML = `<div class="modal-poster">${poster?`<img src="${esc(poster)}" alt="${esc(item.title)} poster">`:posterVisual(item,true)}</div><div class="modal-copy"><div style="display:flex;justify-content:flex-end"><button class="icon-button modal-close" type="button" data-close-modal aria-label="Close details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="eyebrow">${esc(item.category || 'Selected work')} · ${esc(item.credits || 'Oxmo')}</div><h2>${esc(item.title)}</h2><div class="modal-meta">${item.genre?`<span>${esc(item.genre)}</span>`:''}${item.duration?`<span>${esc(item.duration)}</span>`:''}${item.year?`<span>${esc(item.year)}</span>`:''}</div><p>${esc(item.synopsis && !String(item.synopsis).toLowerCase().includes('belum ditambahkan') && !String(item.synopsis).toLowerCase().includes('tambahkan sinopsis') ? item.synopsis : 'Official synopsis will be added soon. This project detail can be updated directly from the Portfolio tab in Google Sheets.')}</p>${trailer?`<a class="btn btn-primary" href="${esc(trailer)}" target="_blank" rel="noopener">Watch trailer ↗</a>`:''}</div>`;
       $('#modalBackdrop').classList.add('open'); $('#modalBackdrop').setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
       const close = $('[data-close-modal]'); if(close) close.focus();
@@ -939,10 +984,6 @@
       const view = location.hash.replace('#','');
       if (['home','work','services','packages','team','booking','client'].includes(view) && state.view!==view) { state.view=view; render(); }
     });
-
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(error => console.warn('Service worker:', error)));
-    }
 
     (async function init() {
       const firstView = location.hash.replace('#','');
