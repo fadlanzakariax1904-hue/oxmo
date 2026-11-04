@@ -32,6 +32,7 @@
       --radius: 24px;
       --shadow: 0 26px 80px rgba(0,0,0,.38);
       --max: 1220px;
+      --bleed-pad: max(24px, calc((100vw - var(--max)) / 2));
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; background: var(--bg); }
@@ -153,6 +154,7 @@
     .filter-chip { border:1px solid var(--line); background:rgba(255,255,255,.035); color:#bcbcc4; border-radius:999px; padding:10px 15px; font-size:11px; cursor:pointer; transition:.2s; }
     .filter-chip.active { color:white; border-color:rgba(225,43,75,.6); background:linear-gradient(110deg,rgba(225,43,75,.28),rgba(225,43,75,.08)); box-shadow:0 5px 18px rgba(180,25,53,.12); }
     .work-full-rail .work-card { flex-basis:250px; }
+    .work-full-rail { width:100vw; margin-left:calc(50% - 50vw); padding-left:var(--bleed-pad); padding-right:var(--bleed-pad); scroll-padding-left:var(--bleed-pad); }
     .service-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
     .service-card { padding:24px; border-radius:22px; min-height:230px; position:relative; overflow:hidden; }
     .service-card::after { content:''; position:absolute; width:180px; height:180px; border-radius:50%; right:-70px; top:-85px; background:radial-gradient(circle,rgba(225,43,75,.17),transparent 70%); pointer-events:none; }
@@ -285,10 +287,10 @@
     @media (max-width:680px) { .quote-grid { grid-template-columns:1fr; } }
 
         /* Hero setengah layar + parallax */
-    .hero-half { position:relative; overflow:hidden; border-radius:28px; height:clamp(320px,50vh,520px); margin:14px 0 8px; display:flex; align-items:flex-end; isolation:isolate; border:1px solid rgba(255,255,255,.12); background:#0d0d10; }
+    .hero-half { position:relative; overflow:hidden; border-radius:0; width:100vw; margin:14px 0 8px calc(50% - 50vw); height:clamp(320px,50vh,520px); display:flex; align-items:flex-end; isolation:isolate; border:0; border-bottom:1px solid rgba(255,255,255,.12); background:#0d0d10; }
     .hero-half .hero-bg { position:absolute; left:0; right:0; top:-20%; bottom:-20%; z-index:-2; will-change:transform; background:radial-gradient(ellipse at 20% 20%,rgba(190,25,55,.35),transparent 55%),linear-gradient(150deg,#2a111a,#0e0e12 60%,#070709); background-size:cover; background-position:center; }
     .hero-half .hero-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(0deg,rgba(8,8,9,.88) 0%,rgba(8,8,9,.35) 55%,rgba(8,8,9,.15) 100%); }
-    .hero-content { padding:clamp(20px,4vw,40px); max-width:760px; }
+    .hero-content { padding:clamp(20px,4vw,40px) var(--bleed-pad); max-width:calc(760px + 2 * var(--bleed-pad)); }
     .hero-half .hero-title { font:500 clamp(32px,6vw,60px)/1.02 'Space Grotesk',sans-serif; letter-spacing:-.055em; margin:14px 0 12px; max-width:none; }
     .hero-half .lead { margin:0; max-width:520px; }
     .hero-half .hero-actions { margin-top:22px; }
@@ -303,7 +305,7 @@
     .rv.in { opacity:1; transform:none; }
 
     /* Rel film tanpa batas, poster tengah terfokus */
-    .cover-rail { position:relative; gap:14px; padding:16px 2px 24px; }
+    .cover-rail { position:relative; gap:14px; padding:16px 0 24px; width:100vw; margin-left:calc(50% - 50vw); }
     .cover-rail .work-card { flex:0 0 clamp(170px,46vw,250px); scroll-snap-align:center; scroll-snap-stop:always; transform:scale(.84); opacity:.5; transition:transform .4s cubic-bezier(.2,.7,.2,1), opacity .4s; }
     .cover-rail .work-card.is-center { transform:scale(1.06); opacity:1; }
     .cover-rail .work-card.is-center .work-poster { border-color:rgba(255,255,255,.55); box-shadow:0 0 0 1px rgba(225,43,75,.5),0 24px 60px rgba(0,0,0,.55); }
@@ -312,7 +314,7 @@
     button.text-link { background:none; border:0; padding:0; margin:0; cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none; }
     .service-icon { display:none; }
 
-    @media (max-width:680px) { .hero-half { border-radius:22px; height:clamp(300px,46vh,420px); } }
+    @media (max-width:680px) { .hero-half { height:clamp(300px,46vh,420px); } }
     
     @media (max-width:900px) {
       .hero { grid-template-columns:1fr .82fr; gap:8px; min-height:450px; }
@@ -327,6 +329,7 @@
       .booking-layout { grid-template-columns:.65fr 1.35fr; }
     }
     @media (max-width:680px) {
+      :root { --bleed-pad:max(15px, calc((100vw - 560px) / 2)); }
       .app-shell { width:min(100% - 30px,560px); padding-bottom:115px; }
       .topbar { height:72px; }
       .brand-mark { width:36px; height:36px; border-radius:12px; }
@@ -387,6 +390,7 @@
       .modal-close { position:sticky; top:0; }
     }
     @media (max-width:390px) {
+      :root { --bleed-pad:12px; }
       .app-shell { width:calc(100% - 24px); }
       .hero-meta { gap:9px; }
       .hero-meta .meta-divider { display:none; }
