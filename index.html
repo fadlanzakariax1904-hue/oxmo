@@ -283,6 +283,36 @@
     .quote-by strong { display:block; font-size:12px; }
     .quote-by span { display:block; font-size:10px; color:var(--muted); margin-top:2px; }
     @media (max-width:680px) { .quote-grid { grid-template-columns:1fr; } }
+
+        /* Hero setengah layar + parallax */
+    .hero-half { position:relative; overflow:hidden; border-radius:28px; height:clamp(320px,50vh,520px); margin:14px 0 8px; display:flex; align-items:flex-end; isolation:isolate; border:1px solid rgba(255,255,255,.12); background:#0d0d10; }
+    .hero-half .hero-bg { position:absolute; left:0; right:0; top:-20%; bottom:-20%; z-index:-2; will-change:transform; background:radial-gradient(ellipse at 20% 20%,rgba(190,25,55,.35),transparent 55%),linear-gradient(150deg,#2a111a,#0e0e12 60%,#070709); background-size:cover; background-position:center; }
+    .hero-half .hero-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(0deg,rgba(8,8,9,.88) 0%,rgba(8,8,9,.35) 55%,rgba(8,8,9,.15) 100%); }
+    .hero-content { padding:clamp(20px,4vw,40px); max-width:760px; }
+    .hero-half .hero-title { font:500 clamp(32px,6vw,60px)/1.02 'Space Grotesk',sans-serif; letter-spacing:-.055em; margin:14px 0 12px; max-width:none; }
+    .hero-half .lead { margin:0; max-width:520px; }
+    .hero-half .hero-actions { margin-top:22px; }
+    @keyframes rise { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+    .hero-content > * { animation:rise .8s cubic-bezier(.2,.7,.2,1) both; }
+    .hero-content > *:nth-child(2) { animation-delay:.1s; }
+    .hero-content > *:nth-child(3) { animation-delay:.2s; }
+    .hero-content > *:nth-child(4) { animation-delay:.3s; }
+
+    /* Staggered fade up */
+    .rv { opacity:0; transform:translateY(22px); transition:opacity .8s cubic-bezier(.2,.7,.2,1), transform .8s cubic-bezier(.2,.7,.2,1); }
+    .rv.in { opacity:1; transform:none; }
+
+    /* Rel film tanpa batas, poster tengah terfokus */
+    .cover-rail { position:relative; gap:14px; padding:16px 2px 24px; }
+    .cover-rail .work-card { flex:0 0 clamp(170px,46vw,250px); scroll-snap-align:center; scroll-snap-stop:always; transform:scale(.84); opacity:.5; transition:transform .4s cubic-bezier(.2,.7,.2,1), opacity .4s; }
+    .cover-rail .work-card.is-center { transform:scale(1.06); opacity:1; }
+    .cover-rail .work-card.is-center .work-poster { border-color:rgba(255,255,255,.55); box-shadow:0 0 0 1px rgba(225,43,75,.5),0 24px 60px rgba(0,0,0,.55); }
+
+    /* Hilangkan latar abu pada tombol teks (Discover service dll) dan kotak ikon kosong */
+    button.text-link { background:none; border:0; padding:0; margin:0; cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none; }
+    .service-icon { display:none; }
+
+    @media (max-width:680px) { .hero-half { border-radius:22px; height:clamp(300px,46vh,420px); } }
     
     @media (max-width:900px) {
       .hero { grid-template-columns:1fr .82fr; gap:8px; min-height:450px; }
@@ -633,32 +663,33 @@
       </section>`;
     }
 
-    function homePage() {
+        function homePage() {
       const s = state.data.settings || {};
-      const projects = sorted(state.data.portfolio || []).filter(w => isTrue(w.active) && String(w.category || '').toLowerCase() === 'film').slice(0,8);
+      const all = sorted(state.data.portfolio || []).filter(w => isTrue(w.active));
+      const n = all.length;
       const heroBg = imgUrl(s.hero_image_url);
-      return `<section class="hero hero-minimal"><h1 class="sr-only">${esc(setting('hero_title') || 'Oxmo — Creative House')}</h1>
-        <div class="hero-art" ${heroBg ? `style="background-image:linear-gradient(0deg,rgba(8,8,9,.3),rgba(8,8,9,.1)),url('${esc(heroBg)}');background-size:cover;background-position:center;border-radius:28px"` : ''}>
-          <div class="halo"></div><div class="art-orbit">
-            <div class="poster-art poster-back"><div class="poster-glow"></div></div>
-            <div class="poster-art poster-mid"><div class="poster-glow"></div></div>
-            <div class="poster-art poster-front"><div class="poster-glow"></div></div>
-          </div>
+      const copies = Array.from({length:5}, () => all.map(workCard).join('')).join('');
+      const arrow = (dir, path, label) => `<button class="round-arrow" type="button" data-car-step="${dir}" aria-label="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${path}"/></svg></button>`;
+      return `<section class="hero-half">
+        <div class="hero-bg"${heroBg ? ` style="background-image:url('${esc(heroBg)}')"` : ''}></div>
+        <div class="hero-shade"></div>
+        <div class="hero-content">
+          <div class="eyebrow">${esc(s.tagline || 'Creative work. Cinematic thinking.')}</div>
+          <h1 class="hero-title">${esc(s.hero_title || 'We create images that move people.')}</h1>
+          <p class="lead">${esc(s.hero_subtitle || '')}</p>
+          <div class="hero-actions"><button class="btn btn-primary" data-view="booking">Start Project <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button><button class="btn btn-quiet" data-view="work">View work</button></div>
         </div>
-        <div class="hero-copy"><div class="hero-actions"><button class="btn btn-primary" data-view="booking">Start Project <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></div>
       </section>
 
       <section class="section">
-        <div class="section-head"><div><div class="eyebrow">Film house</div><h2>Films in <span class="gradient-text">motion.</span></h2><p class="small muted">Selected film productions by Oxmo.</p></div><div style="display:flex;gap:12px;align-items:center"><a class="text-link" href="#work" data-view="work">View all work <span>↗</span></a><div class="rail-controls"><button class="round-arrow" data-scroll="homeFilmRail" data-dir="-1" aria-label="Scroll left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 18-6-6 6-6"/></svg></button><button class="round-arrow" data-scroll="homeFilmRail" data-dir="1" aria-label="Scroll right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9 18 6-6-6-6"/></svg></button></div></div></div>
-        ${projects.length ? `<div class="work-rail" id="homeFilmRail">${projects.map(workCard).join('')}</div>` : `<div class="empty-state">Add your film portfolio in the Portfolio tab in Google Sheets. Use Category = <b>Film</b>.</div>`}
+        <div class="section-head"><div><div class="eyebrow">Portfolio</div><h2>Work in <span class="gradient-text">motion.</span></h2><p class="small muted">Film, photography, and visual projects by Oxmo.</p></div>
+          <div style="display:flex;gap:12px;align-items:center"><a class="text-link" href="#work" data-view="work">View all work</a><div class="rail-controls">${arrow(-1,'m15 18-6-6 6-6','Previous')}${arrow(1,'m9 18 6-6-6-6','Next')}</div></div></div>
+        ${n ? `<div class="work-rail cover-rail" id="homeFilmRail" data-count="${n}">${copies}</div>` : `<div class="empty-state">Add your portfolio in the Portfolio tab in Google Sheets and set Active to TRUE.</div>`}
       </section>
-      ${homePortfolioRail('Product Photography','Product <span class="gradient-text">photography.</span>','Product visuals, campaigns, catalogues, and brand imagery.','homeProductRail')}
-      ${homePortfolioRail('Wedding Photography','Wedding <span class="gradient-text">photography.</span>','Moments and details from wedding day coverage.','homeWeddingRail')}
-      ${homePortfolioRail('Prewedding Photography','Prewedding <span class="gradient-text">stories.</span>','Couple sessions shaped around personal concepts and locations.','homePreweddingRail')}
 
-      <section class="section"><div class="cta-band"><div class="eyebrow">Have a story to tell?</div><h2 style="max-width:600px;margin:14px 0">Let's make something <span class="gradient-text">meaningful.</span></h2><p class="lead small" style="max-width:520px">Tell us about your project. We will shape the right creative approach together.</p><button class="btn btn-primary" data-view="booking">Start a project <span>↗</span></button></div></section>
+      <section class="section"><div class="cta-band"><div class="eyebrow">Have a story to tell?</div><h2 style="max-width:600px;margin:14px 0">Let's make something <span class="gradient-text">meaningful.</span></h2><p class="lead small" style="max-width:520px">Tell us about your project. We will shape the right creative approach together.</p><button class="btn btn-primary" data-view="booking">Start a project</button></div></section>
       <section class="section"><div class="section-head"><div><div class="eyebrow">Find your way</div><h2>Explore the <span class="gradient-text">Oxmo universe.</span></h2></div></div><div class="service-grid">
-        ${[['Photography','Portraits, people, moments, and product visuals.','◉'],['Videography','Wedding films, event recaps, fashion, and commercial motion.','▶'],['Film House','Narrative short films, feature projects, and brand stories.','▣'],['Cinematic Design','Film posters, key art, and visual identities.','✳']].map(x=>`<article class="service-card glass"><div class="service-icon"><span style="font-size:19px">${x[2]}</span></div><h3>${x[0]}</h3><p>${x[1]}</p><button class="text-link" data-view="services">Discover service <span>↗</span></button></article>`).join('')}
+        ${[['Photography','Portraits, people, moments, and product visuals.'],['Videography','Wedding films, event recaps, fashion, and commercial motion.'],['Film House','Narrative short films, feature projects, and brand stories.'],['Cinematic Design','Film posters, key art, and visual identities.']].map(x=>`<article class="service-card glass"><h3>${x[0]}</h3><p>${x[1]}</p><button class="text-link" data-view="services">Discover service</button></article>`).join('')}
       </div></section>${contactSection()}`;
     }
 
@@ -809,6 +840,114 @@
       return html;
     }
 
+        /* ---- Buang simbol teks yang berubah jadi stiker di iPhone ---- */
+    const SYM_TEST = /[↗◉▶▣✳◌◎✉\uFE0F]/;
+    const SYM_ALL = /[↗◉▶▣✳◌◎✉\uFE0F]/g;
+    function fixSymbolNode(node) {
+      if (SYM_TEST.test(node.nodeValue)) node.nodeValue = node.nodeValue.replace(SYM_ALL, '').trim();
+    }
+    function stripSymbols(root) {
+      const walker = document.createTreeWalker(root || document.body, NodeFilter.SHOW_TEXT);
+      let node; while ((node = walker.nextNode())) fixSymbolNode(node);
+    }
+    new MutationObserver(muts => muts.forEach(m => {
+      if (m.type === 'characterData') fixSymbolNode(m.target);
+      else m.addedNodes.forEach(n => { if (n.nodeType === 3) fixSymbolNode(n); else if (n.nodeType === 1) stripSymbols(n); });
+    })).observe(document.body, {childList:true, subtree:true, characterData:true});
+
+    /* ---- Parallax hero ---- */
+    function parallaxTick() {
+      const bg = document.querySelector('.hero-bg'); if (!bg) return;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const r = bg.parentElement.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > innerHeight) return;
+      bg.style.transform = 'translate3d(0,' + (-r.top * 0.18).toFixed(1) + 'px,0) scale(1.06)';
+    }
+    let pxBusy = false;
+    window.addEventListener('scroll', () => {
+      if (pxBusy) return; pxBusy = true;
+      requestAnimationFrame(() => { pxBusy = false; parallaxTick(); });
+    }, {passive:true});
+
+    /* ---- Staggered fade up ---- */
+    function staggerReveal() {
+      if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const groups = $$('#appMain .section, #appMain .page-intro').filter(g => !g.parentElement.closest('.section'));
+      const itemSel = ':scope > *, .service-grid > *, .stat-grid > *, .quote-grid > *, .faq-list > *, .contact-grid > *, .pricing-grid > *, .team-grid > *, .step-list > *';
+      const io = new IntersectionObserver(entries => entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const items = entry.target.__rv || [];
+        items.forEach(el => el.classList.add('in'));
+        setTimeout(() => items.forEach(el => { el.classList.remove('rv', 'in'); el.style.transitionDelay = ''; }), 1800);
+        io.unobserve(entry.target);
+      }), {threshold:.08, rootMargin:'0px 0px -4% 0px'});
+      groups.forEach(g => {
+        let items = Array.from(g.querySelectorAll(itemSel));
+        items = items.filter(el => !items.some(o => o !== el && el.contains(o)));
+        items.forEach((el, i) => { el.classList.add('rv'); el.style.transitionDelay = (Math.min(i, 10) * 70) + 'ms'; });
+        g.__rv = items;
+        io.observe(g);
+      });
+    }
+
+    /* ---- Rel film tanpa batas, poster tengah terfokus ---- */
+    function setupCarousel() {
+      const rail = $('#homeFilmRail'); if (!rail) return;
+      const cards = $$('.work-card', rail);
+      const n = Number(rail.dataset.count) || 1;
+      const copies = Math.max(1, Math.round(cards.length / n));
+      let centers = [];
+      const measure = () => { centers = cards.map(c => c.offsetLeft + c.offsetWidth / 2); };
+      const mark = () => {
+        const mid = rail.scrollLeft + rail.clientWidth / 2;
+        let best = 0, dist = 1e9;
+        centers.forEach((x, i) => { const d = Math.abs(x - mid); if (d < dist) { dist = d; best = i; } });
+        cards.forEach((c, i) => c.classList.toggle('is-center', i === best));
+        return best;
+      };
+      const centerOn = (i, smooth) => rail.scrollTo({left: centers[i] - rail.clientWidth / 2, behavior: smooth ? 'smooth' : 'auto'});
+      const recenter = () => {
+        const b = mark(), copy = Math.floor(b / n);
+        if (copy >= 1 && copy <= copies - 2) return;
+        const target = (b % n) + n * Math.floor(copies / 2);
+        rail.style.scrollSnapType = 'none';
+        rail.scrollLeft = centers[target] - rail.clientWidth / 2;
+        requestAnimationFrame(() => { rail.style.scrollSnapType = ''; mark(); });
+      };
+      let raf = 0, timer = 0;
+      rail.addEventListener('scroll', () => {
+        if (!raf) raf = requestAnimationFrame(() => { raf = 0; mark(); });
+        clearTimeout(timer); timer = setTimeout(recenter, 160);
+      }, {passive:true});
+      // klik poster samping = jadikan tengah dulu; klik poster tengah = buka detail
+      rail.addEventListener('click', e => {
+        const c = e.target.closest('.work-card'); if (!c) return;
+        if (!c.classList.contains('is-center')) { e.preventDefault(); e.stopPropagation(); centerOn(cards.indexOf(c), true); }
+      }, true);
+      $$('[data-car-step]').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const next = Math.max(0, Math.min(cards.length - 1, mark() + Number(btn.dataset.carStep)));
+        centerOn(next, true);
+      }));
+      if (window.__oxCarResize) window.removeEventListener('resize', window.__oxCarResize);
+      window.__oxCarResize = () => { measure(); centerOn(mark(), false); };
+      window.addEventListener('resize', window.__oxCarResize);
+      requestAnimationFrame(() => {
+        measure();
+        rail.style.scrollSnapType = 'none';
+        rail.scrollLeft = centers[n * Math.floor(copies / 2)] - rail.clientWidth / 2;
+        mark();
+        requestAnimationFrame(() => { rail.style.scrollSnapType = ''; mark(); });
+      });
+    }
+
+    function setupMotion() {
+      stripSymbols(document.body);
+      staggerReveal();
+      setupCarousel();
+      parallaxTick();
+    }
+
     function render() {
       const main = $('#appMain');
       const pages = {home:homePage,work:workPage,services:servicesPage,packages:packagesPage,team:teamPage,booking:bookingPage,client:clientPage};
@@ -825,6 +964,7 @@
             ? `<div class="data-status live"><span>Live database · konten dimuat dari Google Sheets · API ${esc(state.apiVersion)}</span><button type="button" id="refreshDatabase">Refresh data</button></div>`
             : '';
       main.innerHTML = statusHtml + pageHtml;
+      setupMotion();
       $$('.nav-item').forEach(button => {
         const active = button.dataset.view === state.view;
         button.classList.toggle('active',active);
