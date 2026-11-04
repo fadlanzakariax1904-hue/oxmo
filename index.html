@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#080809">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -487,7 +488,7 @@
         function imgUrl(value) {
       const u = validUrl(value); if (!u) return '';
       const m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/) || u.match(/drive\.google\.com\/(?:open|uc)\?[^#]*\bid=([\w-]+)/);
-      return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1000' : u;
+      return m ? 'https://lh3.googleusercontent.com/d/' + m[1] + '=w1000' : u;
     }
     const setting = key => (state.data && state.data.settings && state.data.settings[key] != null) ? state.data.settings[key] : '';
     const unique = arr => [...new Set(arr.filter(Boolean))];
