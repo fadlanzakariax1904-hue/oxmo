@@ -649,7 +649,7 @@
       const meta = [item.genre || item.category, item.duration, item.year].filter(Boolean).join(' · ');
       return `<button class="work-card" type="button" data-work-id="${esc(item.work_id || item.title)}" aria-label="View ${esc(item.title)}">
         <div class="work-poster">${posterVisual(item)}</div>
-        <div class="work-card-info"><div><strong>${esc(item.title)}</strong><span>${esc(meta || 'Selected work')}</span></div><span class="round-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></div>
+        <div class="work-card-info"><div><strong>${esc(item.title)}</strong><span>${esc(meta || 'Selected work')}</span></div></div>
       </button>`;
     }
 
