@@ -672,9 +672,10 @@
         function homePage() {
       const s = state.data.settings || {};
       const all = sorted(state.data.portfolio || []).filter(w => isTrue(w.active));
-      const n = all.length;
+      const featured = all.filter(w => isTrue(w.featured));
+      const n = featured.length;
       const heroBg = imgUrl(s.hero_image_url);
-      const copies = Array.from({length:5}, () => all.map(workCard).join('')).join('');
+      const copies = Array.from({length:5}, () => featured.map(workCard).join('')).join('');
       const arrow = (dir, path, label) => `<button class="round-arrow" type="button" data-car-step="${dir}" aria-label="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${path}"/></svg></button>`;
       return `<section class="hero-half">
         <div class="hero-bg"${heroBg ? ` style="background-image:url('${esc(heroBg)}')"` : ''}></div>
@@ -690,7 +691,7 @@
       <section class="section">
         <div class="section-head"><div><div class="eyebrow">Portfolio</div><h2>Work in <span class="gradient-text">motion.</span></h2><p class="small muted">Film, photography, and visual projects by Oxmo.</p></div>
           <div style="display:flex;gap:12px;align-items:center"><a class="text-link" href="#work" data-view="work">View all work</a><div class="rail-controls">${arrow(-1,'m15 18-6-6 6-6','Previous')}${arrow(1,'m9 18 6-6-6-6','Next')}</div></div></div>
-        ${n ? `<div class="work-rail cover-rail" id="homeFilmRail" data-count="${n}">${copies}</div>` : `<div class="empty-state">Add your portfolio in the Portfolio tab in Google Sheets and set Active to TRUE.</div>`}
+        ${n ? `<div class="work-rail cover-rail" id="homeFilmRail" data-count="${n}">${copies}</div>` : `<div class="empty-state">No featured work yet. In the Portfolio tab in Google Sheets, set both Active and Featured to TRUE to show a film here.</div>`}
       </section>
 
       <section class="section"><div class="cta-band"><div class="eyebrow">Have a story to tell?</div><h2 style="max-width:600px;margin:14px 0">Let's make something <span class="gradient-text">meaningful.</span></h2><p class="lead small" style="max-width:520px">Tell us about your project. We will shape the right creative approach together.</p><button class="btn btn-primary" data-view="booking">Start a project</button></div></section>
