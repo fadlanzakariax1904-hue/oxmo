@@ -288,6 +288,20 @@
     .quote-by span { display:block; font-size:10px; color:var(--muted); margin-top:2px; }
     @media (max-width:680px) { .quote-grid { grid-template-columns:1fr; } }
 
+    /* Showreel video */
+    .showreel { position:relative; overflow:hidden; border-radius:24px; border:1px solid var(--line); background:#0d0d10; aspect-ratio:16/9; box-shadow:var(--shadow); cursor:pointer; }
+    .showreel video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+    .showreel::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(0deg,rgba(8,8,9,.5),transparent 42%); }
+    .showreel-cap { position:absolute; z-index:2; left:20px; bottom:16px; font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#e6e6ea; }
+
+    /* Foto tim */
+    .team-gallery { columns:4; column-gap:12px; }
+    .team-gallery figure { margin:0 0 12px; break-inside:avoid; border-radius:16px; overflow:hidden; border:1px solid var(--line); background:#15151a; }
+    .team-gallery img { display:block; width:100%; height:auto; transition:transform .5s; }
+    .team-gallery figure:hover img { transform:scale(1.04); }
+    @media (max-width:900px) { .team-gallery { columns:3; } }
+    @media (max-width:680px) { .team-gallery { columns:2; column-gap:9px; } .team-gallery figure { margin-bottom:9px; border-radius:13px; } .showreel { border-radius:18px; } }
+
         /* Hero setengah layar + parallax */
     .hero-half { position:sticky; top:0; z-index:0; overflow:hidden; border-radius:0; width:100vw; margin:14px 0 8px calc(50% - 50vw); height:clamp(320px,50vh,520px); display:flex; align-items:flex-end; isolation:isolate; border:0; border-bottom:1px solid rgba(255,255,255,.12); background:#0d0d10; }
     .hero-half .hero-bg { position:absolute; left:0; right:0; top:0; bottom:0; z-index:-2; will-change:transform; background:radial-gradient(ellipse at 20% 20%,rgba(190,25,55,.35),transparent 55%),linear-gradient(150deg,#2a111a,#0e0e12 60%,#070709); background-size:cover; background-position:center; }
@@ -669,7 +683,44 @@
       </section>`;
     }
 
-        function homePage() {
+        function anyImg(v) {
+      const u = plain(v);
+      if (/^[\w\-./]+\.(jpe?g|png|webp|avif)$/i.test(u)) return u;
+      return imgUrl(u);
+    }
+
+    function showreelSection() {
+      const s = state.data.settings || {};
+      const src = plain(s.showreel_video_url);
+      if (!/^(https?:\/\/\S+|[\w\-./]+\.(mp4|webm|mov))$/i.test(src)) return '';
+      const poster = anyImg(s.showreel_poster_url);
+      const title = plain(s.showreel_title);
+      return `<section class="section"><div class="section-head"><div><div class="eyebrow">Showreel</div><h2>Moving <span class="gradient-text">images.</span></h2></div></div>
+        <div class="showreel"><video src="${esc(src)}"${poster ? ` poster="${esc(poster)}"` : ''} autoplay muted loop playsinline preload="metadata" aria-label="${esc(title || 'Oxmo showreel')}"></video>${title ? `<div class="showreel-cap">${esc(title)}</div>` : ''}</div></section>`;
+    }
+
+    function teamPhotosSection() {
+      const s = state.data.settings || {};
+      const photos = [];
+      for (let i = 1; i <= 12; i++) { const u = anyImg(s['gallery_' + i]); if (u) photos.push(u); }
+      if (!photos.length) return '';
+      const sub = plain(s.gallery_caption) || 'Moments from the sets, shoots, and production days we shared as a team.';
+      return `<section class="section"><div class="section-head"><div><div class="eyebrow">Behind the scenes</div><h2>Made by <span class="gradient-text">our team.</span></h2><p class="small muted">${esc(sub)}</p></div></div>
+        <div class="team-gallery">${photos.map((u, i) => `<figure><img src="${esc(u)}" alt="Oxmo team at work ${i + 1}" loading="lazy" onerror="this.parentNode.style.display='none'"></figure>`).join('')}</div></section>`;
+    }
+
+    function setupVideos() {
+      $$('.showreel video').forEach(v => {
+        v.muted = true; v.defaultMuted = true; v.setAttribute('muted', '');
+        const play = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+        if ('IntersectionObserver' in window) {
+          new IntersectionObserver(entries => entries.forEach(e => e.isIntersecting ? play() : v.pause()), {threshold:.25}).observe(v);
+        } else play();
+        v.parentElement.addEventListener('click', () => v.paused ? play() : v.pause());
+      });
+    }
+
+    function homePage() {
       const s = state.data.settings || {};
       const all = sorted(state.data.portfolio || []).filter(w => isTrue(w.active));
       const featured = all.filter(w => isTrue(w.featured));
@@ -694,6 +745,8 @@
         ${n ? `<div class="work-rail cover-rail" id="homeFilmRail" data-count="${n}">${copies}</div>` : `<div class="empty-state">No featured work yet. In the Portfolio tab in Google Sheets, set both Active and Featured to TRUE to show a film here.</div>`}
       </section>
 
+      ${showreelSection()}
+      ${teamPhotosSection()}
       <section class="section"><div class="cta-band"><div class="eyebrow">Have a story to tell?</div><h2 style="max-width:600px;margin:14px 0">Let's make something <span class="gradient-text">meaningful.</span></h2><p class="lead small" style="max-width:520px">Tell us about your project. We will shape the right creative approach together.</p><button class="btn btn-primary" data-view="booking">Start a project</button></div></section>
       <section class="section"><div class="section-head"><div><div class="eyebrow">Find your way</div><h2>Explore the <span class="gradient-text">Oxmo universe.</span></h2></div></div><div class="service-grid">
         ${[['Photography','Portraits, people, moments, and product visuals.'],['Videography','Wedding films, event recaps, fashion, and commercial motion.'],['Film House','Narrative short films, feature projects, and brand stories.'],['Cinematic Design','Film posters, key art, and visual identities.']].map(x=>`<article class="service-card glass"><h3>${x[0]}</h3><p>${x[1]}</p><button class="text-link" data-view="services">Discover service</button></article>`).join('')}
@@ -952,6 +1005,7 @@
       stripSymbols(document.body);
       staggerReveal();
       setupCarousel();
+      setupVideos();
       parallaxTick();
     }
 
