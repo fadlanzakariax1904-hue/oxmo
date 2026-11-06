@@ -288,6 +288,15 @@
     .quote-by span { display:block; font-size:10px; color:var(--muted); margin-top:2px; }
     @media (max-width:680px) { .quote-grid { grid-template-columns:1fr; } }
 
+    /* Galeri tim 3 baris */
+    .gal-rows { width:100vw; margin-left:calc(50% - 50vw); display:grid; gap:10px; -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%); mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%); }
+    .gal-row { --gt:clamp(104px,15vw,188px); display:flex; gap:10px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scroll-behavior:auto; cursor:grab; user-select:none; -webkit-user-select:none; }
+    .gal-row::-webkit-scrollbar { display:none; }
+    .gal-row.dragging { cursor:grabbing; }
+    .gal-tile { flex:0 0 var(--gt); width:var(--gt); aspect-ratio:1/1; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.1); background:linear-gradient(145deg,#25252c,#101014); }
+    .gal-tile img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; }
+    @media (max-width:680px) { .gal-rows { gap:8px; } .gal-row { gap:8px; --gt:clamp(88px,24vw,130px); } .gal-tile { border-radius:13px; } }
+
     /* Showreel video */
     .showreel { position:relative; overflow:hidden; border-radius:24px; border:1px solid var(--line); background:#0d0d10; aspect-ratio:16/9; box-shadow:var(--shadow); cursor:pointer; }
     .showreel video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
@@ -699,7 +708,90 @@
         <div class="showreel"><video src="${esc(src)}"${poster ? ` poster="${esc(poster)}"` : ''} autoplay muted loop playsinline preload="metadata" aria-label="${esc(title || 'Oxmo showreel')}"></video>${title ? `<div class="showreel-cap">${esc(title)}</div>` : ''}</div></section>`;
     }
 
+    function galThumb(v) {
+      const u = plain(v);
+      if (!u) return '';
+      if (/^[\w\-./]+\.(jpe?g|png|webp|avif)$/i.test(u)) return u;
+      return imgUrl(u).replace(/(lh3\.googleusercontent\.com\/d\/[\w-]+)=w\d+/, '$1=w480');
+    }
+
     function teamPhotosSection() {
+      const s = state.data.settings || {};
+      const MIN_TILES = 16, COPIES = 5;
+      const rows = [];
+      for (let r = 0; r < 3; r++) {
+        const list = [];
+        for (let i = r * 20 + 1; i <= r * 20 + 20; i++) { const u = galThumb(s['gallery_' + i]); if (u) list.push(u); }
+        if (list.length) rows.push(list);
+      }
+      if (!rows.length) return '';
+      const sub = plain(s.gallery_caption) || 'Moments from the sets, shoots, and production days we shared as a team.';
+      const rowsHtml = rows.map((list, r) => {
+        let base = list.slice();
+        while (base.length < MIN_TILES) base = base.concat(list);
+        const one = base.map(u => `<div class="gal-tile"><img src="${esc(u)}" alt="" loading="lazy" decoding="async" draggable="false" onerror="this.style.visibility='hidden'"></div>`).join('');
+        return `<div class="gal-row" data-row="${r}" data-per="${base.length}" data-copies="${COPIES}">${one.repeat(COPIES)}</div>`;
+      }).join('');
+      return `<section class="section"><div class="section-head"><div><div class="eyebrow">Behind the scenes</div><h2>Made by <span class="gradient-text">our team.</span></h2><p class="small muted">${esc(sub)}</p></div></div>
+        <div class="gal-rows">${rowsHtml}</div></section>`;
+    }
+
+    function setupGalleryRows() {
+      const rows = $$('.gal-row'); if (!rows.length) return;
+      const fractions = [0, .55, .25];
+      const states = rows.map((row, idx) => {
+        const tiles = $$('.gal-tile', row);
+        const per = Number(row.dataset.per) || 1;
+        const copies = Number(row.dataset.copies) || 5;
+        const st = {row, tiles, per, copies, idx, w:0, step:0};
+        st.measure = () => {
+          if (tiles.length > per) st.w = tiles[per].offsetLeft - tiles[0].offsetLeft;
+          st.step = tiles.length > 1 ? tiles[1].offsetLeft - tiles[0].offsetLeft : 0;
+        };
+        return st;
+      });
+      const wrap = st => {
+        const w = st.w; if (!w || st.copies < 3) return;
+        const sl = st.row.scrollLeft;
+        if (sl < w) st.row.scrollLeft = sl + w * 2;
+        else if (sl >= w * (st.copies - 1)) st.row.scrollLeft = sl - w * 2;
+      };
+      states.forEach(st => {
+        const row = st.row;
+        let timer = 0;
+        row.addEventListener('scroll', () => {
+          clearTimeout(timer); timer = setTimeout(() => wrap(st), 120);
+          if (row.scrollLeft <= 1 || row.scrollLeft >= row.scrollWidth - row.clientWidth - 1) wrap(st);
+        }, {passive:true});
+        // geser pakai mouse di desktop (di HP sudah bisa swipe biasa)
+        let down = false, lastX = 0;
+        row.addEventListener('pointerdown', e => {
+          if (e.pointerType !== 'mouse' || e.button !== 0) return;
+          down = true; lastX = e.clientX; row.classList.add('dragging');
+          try { row.setPointerCapture(e.pointerId); } catch (_) {}
+        });
+        row.addEventListener('pointermove', e => {
+          if (!down) return;
+          row.scrollLeft -= (e.clientX - lastX); lastX = e.clientX; wrap(st);
+        });
+        const end = () => { down = false; row.classList.remove('dragging'); };
+        row.addEventListener('pointerup', end);
+        row.addEventListener('pointercancel', end);
+        row.addEventListener('lostpointercapture', end);
+      });
+      requestAnimationFrame(() => states.forEach(st => {
+        st.measure();
+        st.row.scrollLeft = st.w * Math.floor(st.copies / 2) + st.step * fractions[st.idx % 3];
+      }));
+      if (window.__oxGalResize) window.removeEventListener('resize', window.__oxGalResize);
+      window.__oxGalResize = () => states.forEach(st => {
+        const oldW = st.w; st.measure();
+        if (oldW && st.w) st.row.scrollLeft = st.row.scrollLeft * st.w / oldW;
+      });
+      window.addEventListener('resize', window.__oxGalResize);
+    }
+
+    function teamPhotosSectionLama() {
       const s = state.data.settings || {};
       const photos = [];
       for (let i = 1; i <= 12; i++) { const u = anyImg(s['gallery_' + i]); if (u) photos.push(u); }
@@ -1006,6 +1098,7 @@
       staggerReveal();
       setupCarousel();
       setupVideos();
+      setupGalleryRows();
       parallaxTick();
     }
 
