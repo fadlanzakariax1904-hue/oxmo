@@ -288,6 +288,11 @@
     .quote-by span { display:block; font-size:10px; color:var(--muted); margin-top:2px; }
     @media (max-width:680px) { .quote-grid { grid-template-columns:1fr; } }
 
+    /* Work: satu poster di tengah */
+    .work-single { display:flex; justify-content:center; padding:16px 0 24px; }
+    .work-single .work-card { flex:0 0 clamp(170px,46vw,250px); transform:scale(1.06); }
+    .work-single .work-poster { border-color:rgba(255,255,255,.55); box-shadow:0 0 0 1px rgba(225,43,75,.5),0 24px 60px rgba(0,0,0,.55); }
+
     /* Galeri tim 3 baris */
     .gal-rows { width:100vw; margin-left:calc(50% - 50vw); display:grid; gap:10px; -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%); mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%); }
     .gal-row { --gt:clamp(104px,15vw,188px); display:flex; gap:10px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scroll-behavior:auto; cursor:grab; user-select:none; -webkit-user-select:none; }
@@ -845,7 +850,35 @@
       </div></section>${contactSection()}`;
     }
 
+    function workRailHtml(items) {
+      const n = items.length;
+      if (n === 1) return `<div class="work-single">${workCard(items[0])}</div>`;
+      let copies = Math.max(5, Math.ceil(24 / n));
+      if (copies % 2 === 0) copies++;
+      const one = items.map(workCard).join('');
+      return `<div class="work-rail cover-rail" id="portfolioRail" data-count="${n}">${one.repeat(copies)}</div>`;
+    }
+
     function workPage() {
+      const filters = ['Film','Product Photography','Wedding Photography','Prewedding Photography','Event Photography','Fashion Photography','Poster','Other'];
+      const norm = v => plain(v).toLowerCase().replace(/\s+/g, ' ');
+      const sameCat = (cat, f) => { const c = norm(cat) || 'film', x = norm(f); return c === x || c === x.replace(' photography', ''); };
+      const all = sorted(state.data.portfolio || []).filter(w => isTrue(w.active));
+      const items = all.filter(w => sameCat(w.category, state.workFilter));
+      const isFilm = state.workFilter === 'Film';
+      const countText = items.length ? `${items.length} selected ${items.length === 1 ? 'work' : 'works'}` : '';
+      const railHtml = items.length ? workRailHtml(items) : '';
+      const hint = items.length > 1 ? `<div class="small muted" style="margin-top:5px;text-align:center">Swipe or scroll horizontally to explore more.</div>` : '';
+      return `${headerTitle('Selected <span class="gradient-text">work.</span>','A collection of films and creative projects shaped by visual storytelling. Each project can be opened for its synopsis, genre, running time, and production details.','OXMO / PORTFOLIO')}
+        <section class="section" style="padding-top:5px"><div class="filters">${filters.map(f=>`<button type="button" class="filter-chip ${state.workFilter===f?'active':''}" data-filter="${esc(f)}">${esc(f)}</button>`).join('')}</div>
+        <div class="section-head"><div><div class="eyebrow">${esc(state.workFilter)} collection</div><h2>${isFilm?'Films in <span class="gradient-text">motion.</span>':'Selected <span class="gradient-text">projects.</span>'}</h2></div><span class="small muted">${esc(countText)}</span></div>
+        ${railHtml}${hint}
+        </section>
+        ${isFilm ? `<section class="section"><div class="section-head"><div><div class="eyebrow">Film details</div><h2>More than <span class="gradient-text">a title.</span></h2></div></div><div class="small muted" style="max-width:650px;line-height:1.9">Open each film card to view its synopsis, genre, running time, and available trailer. Poster artwork, official synopsis, year, and trailer links can be edited from the Portfolio tab.</div></section>` : ''}
+        ${contactSection()}`;
+    }
+
+    function workPageLama() {
       const filters = ['Film','Product Photography','Wedding Photography','Prewedding Photography','Event Photography','Fashion Photography','Poster','Other'];
       const all = sorted(state.data.portfolio || []).filter(w => isTrue(w.active));
       const items = all.filter(w => String(w.category || 'Film').toLowerCase() === state.workFilter.toLowerCase());
@@ -1044,7 +1077,7 @@
 
     /* ---- Rel film tanpa batas, poster tengah terfokus ---- */
     function setupCarousel() {
-      const rail = $('#homeFilmRail'); if (!rail) return;
+      const rail = ($('#homeFilmRail') || $('#portfolioRail')); if (!rail) return;
       const cards = $$('.work-card', rail);
       const n = Number(rail.dataset.count) || 1;
       const copies = Math.max(1, Math.round(cards.length / n));
